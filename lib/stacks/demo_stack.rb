@@ -3,6 +3,7 @@ module DemoStack
   include Rubycfn
 
   included do
+    include DemoStack::VPC
     include DemoStack::Lander
   end
 end
