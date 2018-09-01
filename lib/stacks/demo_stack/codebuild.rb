@@ -10,7 +10,7 @@ module DemoStack
       resource :check_demo_build_log_group,
                type: "AWS::Logs::LogGroup"
 
-      resource :builkd_demo_done_log_group,
+      resource :build_demo_done_log_group,
                type: "AWS::Logs::LogGroup"
 
       resource :webhook_demo_resource_log_group,
