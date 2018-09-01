@@ -4,6 +4,7 @@ module DemoStack
 
   included do
     include DemoStack::VPC
-    include DemoStack::Lander
+    include DemoStack::Codebuild
+    #include DemoStack::Lander
   end
 end
