@@ -222,6 +222,25 @@ module DemoStack
           ]
         end
       end
+
+      resource :build_commit_step_functions_state_machine,
+               type: "AWS::StepFunctions::StateMachine" do |r|
+        r.depends_on %w(IamRoleStateMachineExecution)
+        r.property(:definition_string) { "{\"Comment\":\"Check for build status for the given build project, and mark it when done on GH\",\"StartAt\":\"start_build\",\"States\":{\"start_build\":{\"Type\":\"Task\",\"Resource\":\"arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${AWS::StackName}-trigger-start-build\",\"Next\":\"check_build_status\"},\"wait_a_bit\":{\"Type\":\"Wait\",\"Seconds\":5,\"Next\":\"check_build_status\"},\"check_build_status\":{\"Type\":\"Task\",\"Resource\":\"arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${AWS::StackName}-trigger-check-build-status\",\"Next\":\"check_build_status_outcome\"},\"check_build_status_outcome\":{\"Type\":\"Choice\",\"Choices\":[{\"Variable\":\"$.buildComplete\",\"BooleanEquals\":true,\"Next\":\"build_done\"}],\"Default\":\"wait_a_bit\"},\"build_done\":{\"Type\":\"Task\",\"Resource\":\"arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${AWS::StackName}-trigger-build-done\",\"End\":true}}}".fnsub }
+        r.property(:role_arn) { "iam_role_state_machine_execution".cfnize.ref("Arn") }
+      end
+
+      resource :api_gateway_rest_api,
+               type: "AWS::ApiGateway::RestApi" do |r|
+        r.property(:name) { "trigger-github-webhook" }
+      end
+
+      resource :api_gateway_resource_trigger_demo_build,
+               type: "AWS::ApiGateway::Resource" do |r|
+        r.property(:parent_id) { "ApiGatewayRestApi".ref("RootResourceId") }
+        r.property(:path_part) { "trigger-build" }
+        r.property(:rest_api_id) { "ApiGatewayRestApi".ref }
+      end
     end
   end
 end
