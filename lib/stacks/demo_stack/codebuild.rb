@@ -187,6 +187,41 @@ module DemoStack
           }
         end
       end
+
+      resource :iam_role_state_machine_execution,
+               type: "AWS::IAM::Role" do |r|
+        r.property(:assume_role_policy_document) do
+          {
+            "Version": "2012-10-17",
+            "Statement": [
+              {
+                "Effect": "Allow",
+                "Principal": {
+                  "Service": "states.${AWS::Region}.amazonaws.com".fnsub 
+                },
+                "Action": "sts:AssumeRole"
+              }
+            ]
+          }
+        end
+        r.property(:policies) do
+          [
+            {
+              "PolicyName": "trigger-${AWS::Region}-github-webhook-statemachine".fnsub,
+              "PolicyDocument": {
+                "Version": "2012-10-17",
+                "Statement": [
+                  {
+                    "Effect": "Allow",
+                    "Action": %w(lambda:InvokeFunction),
+                    "Resource": "*"
+                  }
+                ]
+              }
+            }
+          ]
+        end
+      end
     end
   end
 end
