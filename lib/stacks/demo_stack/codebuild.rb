@@ -7,13 +7,13 @@ module DemoStack
       resource :start_demo_build_log_group,
                type: "AWS::Logs::LogGroup"
 
-      resource :check_demo_build_log_group,
+      resource :check_build_log_group,
                type: "AWS::Logs::LogGroup"
 
-      resource :build_demo_done_log_group,
+      resource :build_done_log_group,
                type: "AWS::Logs::LogGroup"
 
-      resource :webhook_demo_resource_log_group,
+      resource :webhook_resource_log_group,
                type: "AWS::Logs::LogGroup"
 
       resource :iam_role_lambda_execution,
@@ -91,6 +91,87 @@ module DemoStack
         end
         r.property(:function_name) { "${AWS::StackName}-trigger-start-build".fnsub }
         r.property(:handler) { "handler.start_build" }
+        r.property(:memory_size) { 1024 }
+        r.property(:role) { "iam_role_lambda_execution".cfnize.ref("Arn") }
+        r.property(:runtime) { "nodejs6.10" }
+        r.property(:timeout) { 6 }
+        r.property(:environment) do
+          {
+            "Variables": {
+              "BUILD_PROJECT": "Foo",
+              "GITHUB_USERNAME": "Bar",
+              "GITHUB_ACCESS_TOKEN": "Foobar",
+              "GITHUB_REPOSITORY": "Foofoobar"
+            }
+          }
+        end
+      end
+
+      resource :check_build_status_lambda_function,
+                type: "AWS::Lambda::Function" do |r|
+        r.depends_on %w(IamRoleLambdaExecution CheckBuildLogGroup)
+        r.property(:code) do
+          {
+            "S3Bucket": "github-webhook-artifacts-${AWS::Region}".fnsub,
+            "S3Key": "serverless/github-webhook/trigger/1494342303416-2017-05-09T15:05:03.416Z/github-webhook.zip"
+          }
+        end
+        r.property(:function_name) { "${AWS::StackName}-trigger-check-build-status".fnsub }
+        r.property(:handler) { "handler.check_build_status" }
+        r.property(:memory_size) { 1024 }
+        r.property(:role) { "iam_role_lambda_execution".cfnize.ref("Arn") }
+        r.property(:runtime) { "nodejs6.10" }
+        r.property(:timeout) { 6 }
+        r.property(:environment) do
+          {
+            "Variables": {
+              "BUILD_PROJECT": "Foo",
+              "GITHUB_USERNAME": "Bar",
+              "GITHUB_ACCESS_TOKEN": "Foobar",
+              "GITHUB_REPOSITORY": "Foofoobar"
+            }
+          }
+        end
+      end
+
+      resource :build_done_lambda_function,
+                type: "AWS::Lambda::Function" do |r|
+        r.depends_on %w(IamRoleLambdaExecution BuildDoneLogGroup)
+        r.property(:code) do
+          {
+            "S3Bucket": "github-webhook-artifacts-${AWS::Region}".fnsub,
+            "S3Key": "serverless/github-webhook/trigger/1494342303416-2017-05-09T15:05:03.416Z/github-webhook.zip"
+          }
+        end
+        r.property(:function_name) { "${AWS::StackName}-trigger-build-done".fnsub }
+        r.property(:handler) { "handler.build_done" }
+        r.property(:memory_size) { 1024 }
+        r.property(:role) { "iam_role_lambda_execution".cfnize.ref("Arn") }
+        r.property(:runtime) { "nodejs6.10" }
+        r.property(:timeout) { 6 }
+        r.property(:environment) do
+          {
+            "Variables": {
+              "BUILD_PROJECT": "Foo",
+              "GITHUB_USERNAME": "Bar",
+              "GITHUB_ACCESS_TOKEN": "Foobar",
+              "GITHUB_REPOSITORY": "Foofoobar"
+            }
+          }
+        end
+      end
+
+      resource :webhook_resource_lambda_function,
+                type: "AWS::Lambda::Function" do |r|
+        r.depends_on %w(IamRoleLambdaExecution WebhookResourceLogGroup)
+        r.property(:code) do
+          {
+            "S3Bucket": "github-webhook-artifacts-${AWS::Region}".fnsub,
+            "S3Key": "serverless/github-webhook/trigger/1494342303416-2017-05-09T15:05:03.416Z/github-webhook.zip"
+          }
+        end
+        r.property(:function_name) { "${AWS::StackName}-trigger-webhook-resource".fnsub }
+        r.property(:handler) { "webhook.resource" }
         r.property(:memory_size) { 1024 }
         r.property(:role) { "iam_role_lambda_execution".cfnize.ref("Arn") }
         r.property(:runtime) { "nodejs6.10" }
