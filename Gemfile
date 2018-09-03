@@ -5,4 +5,5 @@ source 'https://rubygems.org' do
   gem "rspec-given", "~> 3.7"
   gem "rspec_junit_formatter", "~> 0.2"
   gem "simplecov", "~> 0.16.1"
+  gem "launchy", "~> 2.4.3"
 end
