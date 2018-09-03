@@ -5,27 +5,7 @@ module DemoStack
     extend ActiveSupport::Concern
 
     included do
-
-      parameter :github_username,
-                type: "String",
-                default: "dennisvink",
-                description: "Github username, this is the user which will be displayed"
-
-      parameter :github_repository,
-                type: "String",
-                default: "https://github.com/dennisvink/elastic-cloud-engineering/",
-                description: "Github repository url, eg: https://github.com/[username]/[repository]"
-
-      parameter :codebuild_project,
-                type: "String",
-                default: "demo",
-                Description: "Name of the build project that should be triggered"
-
-      variable :github_access_token,
-               required: true,
-               default: ENV["GITHUB_ACCESS_TOKEN"]
-
-      resource :iam_role_lambda_execution,
+      resource :code_build_service_role,
                type: "AWS::IAM::Role" do |r|
         r.property(:assume_role_policy_document) do
           {
@@ -35,7 +15,7 @@ module DemoStack
 		"Effect": "Allow",
 		"Principal": {
 		  "Service": [
-		    "lambda.amazonaws.com"
+		    "codebuild.amazonaws.com"
 		  ]
 		},
 		"Action": [
@@ -45,186 +25,25 @@ module DemoStack
 	    ]
           }
         end
+        r.property(:path) { "/service-role/" }
         r.property(:policies) do
           [
             {
-              "PolicyName": %w(trigger github-webhook lambda).fnjoin("-"),
+              "PolicyName": "CodeBuildAccessPolicies",
               "PolicyDocument": {
                 "Version": "2012-10-17",
                 "Statement": [
-                  {
-                    "Effect": "Allow",
-                    "Action": [
-                      "logs:CreateLogStream"
-                    ],
-                    "Resource":
-                      %w(start-build check-build-status build-done webhook-resource).map do |log_group|
-                        "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/github-webhook-trigger-#{log_group}:*".fnsub
-                      end
-                    
-                  },
-                  {
-                    "Effect": "Allow",
-                    "Action": [
-                      "logs:PutLogEvents"
-                    ],
-                    "Resource":
-                      %w(start-build check-build-status build-done webhook-resource).map do |log_group|
-                        "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/github-webhook-trigger-#{log_group}:*".fnsub
-                      end
-                    
-                  },
-                  {
-                    "Effect": "Allow",
-                    "Action": [
-                      "codebuild:*"
-                    ],
-                    "Resource": "*"
-                  }
-                ],
-              }
-            }
-          ]
-        end
-        r.property(:path) { "/" }
-      end
-
-      resource :start_demo_build_lambda_function,
-                type: "AWS::Lambda::Function" do |r|
-        r.depends_on %w(IamRoleLambdaExecution StartDemoBuildLogGroup)
-        r.property(:code) do
-          {
-            "S3Bucket": "github-webhook-artifacts-${AWS::Region}".fnsub,
-            "S3Key": "serverless/github-webhook/trigger/1494342303416-2017-05-09T15:05:03.416Z/github-webhook.zip"
-          }
-        end
-        r.property(:function_name) { "${AWS::StackName}-trigger-start-build".fnsub }
-        r.property(:handler) { "handler.start_build" }
-        r.property(:memory_size) { 1024 }
-        r.property(:role) { "iam_role_lambda_execution".cfnize.ref("Arn") }
-        r.property(:runtime) { "nodejs6.10" }
-        r.property(:timeout) { 6 }
-        r.property(:environment) do
-          {
-            "Variables": {
-              "BUILD_PROJECT": "codebuild_project".cfnize.ref,
-              "GITHUB_USERNAME": "github_username".cfnize.ref,
-              "GITHUB_ACCESS_TOKEN": github_access_token,
-              "GITHUB_REPOSITORY": "github_repository".cfnize.ref
-            }
-          }
-        end
-      end
-
-      resource :check_build_status_lambda_function,
-                type: "AWS::Lambda::Function" do |r|
-        r.depends_on %w(IamRoleLambdaExecution CheckBuildLogGroup)
-        r.property(:code) do
-          {
-            "S3Bucket": "github-webhook-artifacts-${AWS::Region}".fnsub,
-            "S3Key": "serverless/github-webhook/trigger/1494342303416-2017-05-09T15:05:03.416Z/github-webhook.zip"
-          }
-        end
-        r.property(:function_name) { "${AWS::StackName}-trigger-check-build-status".fnsub }
-        r.property(:handler) { "handler.check_build_status" }
-        r.property(:memory_size) { 1024 }
-        r.property(:role) { "iam_role_lambda_execution".cfnize.ref("Arn") }
-        r.property(:runtime) { "nodejs6.10" }
-        r.property(:timeout) { 6 }
-        r.property(:environment) do
-          {
-            "Variables": {
-              "BUILD_PROJECT": "codebuild_project".cfnize.ref,
-              "GITHUB_USERNAME": "github_username".cfnize.ref,
-              "GITHUB_ACCESS_TOKEN": github_access_token,
-              "GITHUB_REPOSITORY": "github_repository".cfnize.ref
-            }
-          }
-        end
-      end
-
-      resource :build_done_lambda_function,
-                type: "AWS::Lambda::Function" do |r|
-        r.depends_on %w(IamRoleLambdaExecution BuildDoneLogGroup)
-        r.property(:code) do
-          {
-            "S3Bucket": "github-webhook-artifacts-${AWS::Region}".fnsub,
-            "S3Key": "serverless/github-webhook/trigger/1494342303416-2017-05-09T15:05:03.416Z/github-webhook.zip"
-          }
-        end
-        r.property(:function_name) { "${AWS::StackName}-trigger-build-done".fnsub }
-        r.property(:handler) { "handler.build_done" }
-        r.property(:memory_size) { 1024 }
-        r.property(:role) { "iam_role_lambda_execution".cfnize.ref("Arn") }
-        r.property(:runtime) { "nodejs6.10" }
-        r.property(:timeout) { 6 }
-        r.property(:environment) do
-          {
-            "Variables": {
-              "BUILD_PROJECT": "codebuild_project".cfnize.ref,
-              "GITHUB_USERNAME": "github_username".cfnize.ref,
-              "GITHUB_ACCESS_TOKEN": github_access_token,
-              "GITHUB_REPOSITORY": "github_repository".cfnize.ref
-            }
-          }
-        end
-      end
-
-      resource :webhook_resource_lambda_function,
-                type: "AWS::Lambda::Function" do |r|
-        r.depends_on %w(IamRoleLambdaExecution WebhookResourceLogGroup)
-        r.property(:code) do
-          {
-            "S3Bucket": "github-webhook-artifacts-${AWS::Region}".fnsub,
-            "S3Key": "serverless/github-webhook/trigger/1494342303416-2017-05-09T15:05:03.416Z/github-webhook.zip"
-          }
-        end
-        r.property(:function_name) { "${AWS::StackName}-trigger-webhook-resource".fnsub }
-        r.property(:handler) { "webhook.resource" }
-        r.property(:memory_size) { 1024 }
-        r.property(:role) { "iam_role_lambda_execution".cfnize.ref("Arn") }
-        r.property(:runtime) { "nodejs6.10" }
-        r.property(:timeout) { 6 }
-        r.property(:environment) do
-          {
-            "Variables": {
-              "BUILD_PROJECT": "codebuild_project".cfnize.ref,
-              "GITHUB_USERNAME": "github_username".cfnize.ref,
-              "GITHUB_ACCESS_TOKEN": github_access_token,
-              "GITHUB_REPOSITORY": "github_repository".cfnize.ref
-            }
-          }
-        end
-      end
-
-      resource :iam_role_state_machine_execution,
-               type: "AWS::IAM::Role" do |r|
-        r.property(:assume_role_policy_document) do
-          {
-            "Version": "2012-10-17",
-            "Statement": [
-              {
-                "Effect": "Allow",
-                "Principal": {
-                  "Service": "states.${AWS::Region}.amazonaws.com".fnsub 
-                },
-                "Action": "sts:AssumeRole"
-              }
-            ]
-          }
-        end
-        r.property(:policies) do
-          [
-            {
-              "PolicyName": "trigger-${AWS::Region}-github-webhook-statemachine".fnsub,
-              "PolicyDocument": {
-                "Version": "2012-10-17",
-                "Statement": [
-                  {
-                    "Effect": "Allow",
-                    "Action": %w(lambda:InvokeFunction),
-                    "Resource": "*"
-                  }
+                    {
+                        "Effect": "Allow",
+                        "Action": [
+                            "logs:CreateLogGroup",
+                            "logs:CreateLogStream",
+                            "logs:PutLogEvents"
+                        ],
+                        "Resource": [
+                          "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/*".fnsub
+                        ]
+                    }
                 ]
               }
             }
@@ -232,17 +51,37 @@ module DemoStack
         end
       end
 
-      resource :build_commit_step_functions_state_machine,
-               type: "AWS::StepFunctions::StateMachine" do |r|
-        r.depends_on %w(IamRoleStateMachineExecution)
-        r.property(:definition_string) { "{\"Comment\":\"Check for build status for the given build project, and mark it when done on GH\",\"StartAt\":\"start_build\",\"States\":{\"start_build\":{\"Type\":\"Task\",\"Resource\":\"arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${AWS::StackName}-trigger-start-build\",\"Next\":\"check_build_status\"},\"wait_a_bit\":{\"Type\":\"Wait\",\"Seconds\":5,\"Next\":\"check_build_status\"},\"check_build_status\":{\"Type\":\"Task\",\"Resource\":\"arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${AWS::StackName}-trigger-check-build-status\",\"Next\":\"check_build_status_outcome\"},\"check_build_status_outcome\":{\"Type\":\"Choice\",\"Choices\":[{\"Variable\":\"$.buildComplete\",\"BooleanEquals\":true,\"Next\":\"build_done\"}],\"Default\":\"wait_a_bit\"},\"build_done\":{\"Type\":\"Task\",\"Resource\":\"arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${AWS::StackName}-trigger-build-done\",\"End\":true}}}".fnsub }
-        r.property(:role_arn) { "iam_role_state_machine_execution".cfnize.ref("Arn") }
-      end
-
-      resource :github_webhook,
-               type: "Custom::GithubWebhook" do |r|
-        r.property(:service_token) { "webhook_resource_lambda_function".cfnize.ref("Arn") }
-        r.property(:endpoint) { ["https://", "ApiGatewayRestApi".ref, ".execute-api.eu-west-1.amazonaws.com/trigger/trigger-build/"].fnjoin }
+      resource :code_build_demo_project,
+               type: "AWS::CodeBuild::Project" do |r|
+        r.property(:name) { "demo-project-${AWS::Region}-${AWS::StackName}".fnsub }
+        r.property(:service_role) { "code_build_service_role".cfnize.ref("Arn") }
+        r.property(:artifacts) do
+          {
+            "Type": "no_artifacts"
+          }
+        end
+        r.property(:environment) do
+          {
+            "Type": "LINUX_CONTAINER",
+            "ComputeType": "BUILD_GENERAL1_SMALL",
+            "Image": "aws/codebuild/ruby:2.3.1"
+          }
+        end
+        r.property(:source) do
+          {
+            "Auth": {
+              "Type": "OAUTH"
+            },
+            "Location": "github_repository".cfnize.ref,
+            "Type": "GITHUB"
+          }
+        end
+        r.property(:triggers) do
+          {
+            "Webhook": true
+          }
+        end
+        r.property(:timeout_in_minutes) { 10 }
       end
     end
   end
