@@ -3,6 +3,10 @@ module DemoStack
     extend ActiveSupport::Concern
 
     included do
+      parameter :github_repository,
+                default: "https://github.com/dennisvink/elastic-cloud-engineering/",
+                type: "String"
+
       resource :code_build_service_role,
                type: "AWS::IAM::Role" do |r|
         r.property(:assume_role_policy_document) do

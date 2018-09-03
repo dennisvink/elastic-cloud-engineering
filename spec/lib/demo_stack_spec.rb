@@ -23,7 +23,7 @@ describe Rubycfn do
     let(:template) { json }
     subject { template }
 
-    it { should_not have_key "Parameters" }
+    it { should have_key "Parameters" }
     it { should have_key "Resources" }
 
     context "Has Codebuild Resources" do
