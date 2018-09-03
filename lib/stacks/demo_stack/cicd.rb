@@ -18,7 +18,7 @@ module DemoStack
 
       parameter :codebuild_project,
                 type: "String",
-                default: "test-hook",
+                default: "demo",
                 Description: "Name of the build project that should be triggered"
 
       variable :github_access_token,

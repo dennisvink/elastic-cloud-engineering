@@ -3,7 +3,6 @@ version: 0.1
 phases:
   install:
     commands:
-      - exit 255
       - echo Do nothing
   pre_build:
     commands:
