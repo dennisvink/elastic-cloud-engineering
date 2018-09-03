@@ -1,5 +1,3 @@
-require 'date'
-
 module DemoStack
   module CICD
     extend ActiveSupport::Concern
