@@ -4,7 +4,8 @@ module DemoStack
 
   included do
     include DemoStack::VPC
-    include DemoStack::Codebuild
-    #include DemoStack::Lander
+    include DemoStack::LogGroups
+    include DemoStack::CICD
+    include DemoStack::ApiGateway
   end
 end

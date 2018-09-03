@@ -1,7 +1,7 @@
 require 'date'
 
 module DemoStack
-  module Codebuild
+  module CICD
     extend ActiveSupport::Concern
 
     included do
@@ -24,18 +24,6 @@ module DemoStack
       variable :github_access_token,
                required: true,
                default: ENV["GITHUB_ACCESS_TOKEN"]
-
-      resource :start_demo_build_log_group,
-               type: "AWS::Logs::LogGroup"
-
-      resource :check_build_log_group,
-               type: "AWS::Logs::LogGroup"
-
-      resource :build_done_log_group,
-               type: "AWS::Logs::LogGroup"
-
-      resource :webhook_resource_log_group,
-               type: "AWS::Logs::LogGroup"
 
       resource :iam_role_lambda_execution,
                type: "AWS::IAM::Role" do |r|
@@ -249,123 +237,6 @@ module DemoStack
         r.depends_on %w(IamRoleStateMachineExecution)
         r.property(:definition_string) { "{\"Comment\":\"Check for build status for the given build project, and mark it when done on GH\",\"StartAt\":\"start_build\",\"States\":{\"start_build\":{\"Type\":\"Task\",\"Resource\":\"arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${AWS::StackName}-trigger-start-build\",\"Next\":\"check_build_status\"},\"wait_a_bit\":{\"Type\":\"Wait\",\"Seconds\":5,\"Next\":\"check_build_status\"},\"check_build_status\":{\"Type\":\"Task\",\"Resource\":\"arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${AWS::StackName}-trigger-check-build-status\",\"Next\":\"check_build_status_outcome\"},\"check_build_status_outcome\":{\"Type\":\"Choice\",\"Choices\":[{\"Variable\":\"$.buildComplete\",\"BooleanEquals\":true,\"Next\":\"build_done\"}],\"Default\":\"wait_a_bit\"},\"build_done\":{\"Type\":\"Task\",\"Resource\":\"arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${AWS::StackName}-trigger-build-done\",\"End\":true}}}".fnsub }
         r.property(:role_arn) { "iam_role_state_machine_execution".cfnize.ref("Arn") }
-      end
-
-      resource :api_gateway_rest_api,
-               type: "AWS::ApiGateway::RestApi" do |r|
-        r.property(:name) { "trigger-github-webhook" }
-      end
-
-      resource :api_gateway_resource_trigger_demo_build,
-               type: "AWS::ApiGateway::Resource" do |r|
-        r.property(:parent_id) { "ApiGatewayRestApi".ref("RootResourceId") }
-        r.property(:path_part) { "trigger-build" }
-        r.property(:rest_api_id) { "ApiGatewayRestApi".ref }
-      end
-
-      resource :api_gateway_method_trigger_demo_build_post,
-               type: "AWS::ApiGateway::Method" do |r|
-        r.property(:http_method) { "POST" }
-        r.property(:request_parameters) { }
-        r.property(:authorization_type) { "NONE" }
-        r.property(:resource_id) { "api_gateway_resource_trigger_demo_build".cfnize.ref }
-        r.property(:rest_api_id) { "api_gateway_rest_api".cfnize.ref }
-        r.property(:integration) do
-          {
-            "IntegrationHttpMethod": "POST",
-            "Type": "AWS",
-            "Credentials": "ApiGatewayToStepFunctionsRole".ref("Arn"),
-            "Uri": ["arn:aws:apigateway:", "AWS::Region".ref, ":states:action/StartExecution"].fnjoin,
-            "PassthroughBehavior": "NEVER",
-            "RequestTemplates": {
-              "application/json": [
-                "#set( $body = $util.escapeJavaScript($input.json('$')) ) \n\n",
-                "{\"input\": \"$body\",\"name\": \"$context.requestId\",\"stateMachineArn\":\"",
-                "build_commit_step_functions_state_machine".cfnize.ref,
-                "\"}"
-              ].fnjoin,
-              "application/x-www-form-urlencoded": [
-                "#set( $body = $util.escapeJavaScript($input.json('$')) ) \n\n",
-                "{\"input\": \"$body\",\"name\": \"$context.requestId\",\"stateMachineArn\":\"",
-                "build_commit_step_functions_state_machine".cfnize.ref,
-                "\"}"
-              ].fnjoin
-            },
-            "IntegrationResponses": [
-              {
-                "StatusCode": 200,
-                "SelectionPattern": 200,
-                "ResponseParameters": {},
-                "ResponseTemplates": {}
-              },
-              {
-                "StatusCode": 400,
-                "SelectionPattern": 400,
-                "ResponseParameters": {},
-                "ResponseTemplates": {}
-              }
-            ] 
-          }
-        end
-        r.property(:method_responses) do
-          [
-            {
-              "ResponseParameters": {},
-              "ResponseModels": {},
-              "StatusCode": 200
-            },
-            {
-              "ResponseParameters": {},
-              "ResponseModels": {},
-              "StatusCode": 400
-            }
-          ]
-        end
-      end
-
-      resource :api_gateway_to_step_functions_role,
-               type: "AWS::IAM::Role" do |r|
-        r.property(:assume_role_policy_document) do
-          {
-            "Version": "2012-10-17",
-            "Statement":
-              [ 
-                {
-                  "Effect": "Allow",
-                  "Principal": {
-                    "Service": "apigateway.amazonaws.com"
-                  },
-                  "Action": "sts:AssumeRole"
-                }
-              ]
-          }
-        end
-        r.property(:policies) do
-          [
-            {
-              "PolicyName": "apigatewaytostepfunctions",
-              "PolicyDocument": {
-                "Version": "2012-10-17",
-                "Statement": [
-                  {
-                    "Effect": "Allow",
-                    "Action": [
-                      "states:StartExecution"
-                    ],
-                    "Resource": "*"
-                  }
-                ]
-              }
-            }
-          ]
-        end
-      end
-
-      resource "api_gateway_deployment_#{DateTime.now.strftime('%Q')}".cfnize,
-               type: "AWS::ApiGateway::Deployment" do |r|
-        r.depends_on "api_gateway_method_trigger_demo_build_post".cfnize
-        r.property(:rest_api_id) { "api_gateway_rest_api".cfnize.ref }
-        r.property(:stage_name) { "trigger" }
       end
 
       resource :github_webhook,
