@@ -3,14 +3,14 @@ version: 0.1
 phases:
   install:
     commands:
-      - echo Do nothing
+      - bundle install
   pre_build:
     commands:
-      - printenv
-      - echo Nothing to do in the pre_build phase...
+      - echo Do nothing
   build:
     commands:
       - echo Build started on `date`
+      - rake
   post_build:
     commands:
       - echo Build completed on `date`

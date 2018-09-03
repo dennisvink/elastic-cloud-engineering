@@ -1,3 +1,5 @@
+coverage/
+test-reports/
 build/
 .env.private
 .idea/
