@@ -71,6 +71,7 @@ module DemoStack
         end
         r.property(:source) do
           {
+            "BuildSpec": text = File.read("config/buildspec.yml"),
             "Auth": {
               "Type": "OAUTH"
             },
