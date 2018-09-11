@@ -30,7 +30,7 @@ describe Rubycfn do
       let(:resources) { template["Resources"] }
       subject { resources }
 
-      # it { should have_key "MyAwesomeBucket" }
+      it { should have_key "MyAwesomeBucket" }
       it { should have_key "CodeBuildDemoProject" }
       it { should have_key "CodeBuildServiceRole" }
 
