@@ -14,20 +14,20 @@ module DemoStack
                type: "AWS::IAM::Role" do |r|
         r.property(:assume_role_policy_document) do
           {
-	    "Version": "2012-10-17",
-	    "Statement": [
-	      {
-		"Effect": "Allow",
-		"Principal": {
-		  "Service": [
-		    "codebuild.amazonaws.com"
-		  ]
-		},
-		"Action": [
-		  "sts:AssumeRole"
-		]
-	      }
-	    ]
+            "Version": "2012-10-17",
+            "Statement": [
+              {
+                "Effect": "Allow",
+                "Principal": {
+                  "Service": [
+                    "codebuild.amazonaws.com"
+                  ]
+                },
+                "Action": [
+                  "sts:AssumeRole"
+                ]
+              }
+            ]
           }
         end
         r.property(:path) { "/service-role/" }
