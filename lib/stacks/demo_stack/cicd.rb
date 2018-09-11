@@ -7,8 +7,8 @@ module DemoStack
                 default: "https://github.com/dennisvink/elastic-cloud-engineering/",
                 type: "String"
 
-      # resource :my_awesome_bucket,
-      #          type: "AWS::S3::Bucket"
+      resource :my_awesome_bucket,
+               type: "AWS::S3::Bucket"
 
       resource :code_build_service_role,
                type: "AWS::IAM::Role" do |r|
